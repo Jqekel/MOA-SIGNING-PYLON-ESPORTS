@@ -96,6 +96,16 @@
 
   .ptable{width:100%;border-collapse:collapse}
   .ptable td{padding:0;vertical-align:top}
+  .refline{text-align:right;font-size:12px;color:#444;margin:-8px 0 4px}
+  /* used only while building the PDF copy */
+  .pdfmode .paper{padding:0;box-shadow:none;max-width:none;margin:0}
+  .pdfmode .ptable thead{display:none}
+  .pdfmode .fill,.pdfmode .fill.empty{background:none;color:#000}
+  /* keep desktop sizes in the PDF even when signing on a phone */
+  .pdfmode .paper{font-size:14.6px;width:625px} .pdfmode .title{font-size:30px}
+  .pdfmode .paper ol{padding-left:48px} .pdfmode .paper .ind{text-indent:48px}
+  .pdfmode .sigs{grid-template-columns:1fr 1fr}
+  .pdfmode .refline{margin:0 0 4px}
   @page{size:letter;margin:.3in .9in .8in}
   @media print{
     body{background:#fff}
@@ -166,6 +176,7 @@
   </div>
 </td></tr></thead><tbody><tr><td>
 
+  <div class="refline" id="refLine" hidden></div>
   <div class="title">MEMORANDUM OF AGREEMENT</div>
 
   <p>This Memorandum of Agreement is entered into this <span class="fill" data-f="date"></span> at the Polytechnic University of the Philippines, Sta. Mesa, Manila, by and between:</p>
@@ -359,12 +370,60 @@ $("submit").onclick=async()=>{
     const res=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
     const out=await res.json();
     if(!out.ok) throw new Error(out.error||"Unknown error");
-    setStatus("Signed and submitted! Reference no. "+out.ref+". You can now print or save a copy.","ok");
+    signedRef=out.ref; $("refLine").textContent="Ref. No.: "+out.ref; $("refLine").hidden=false;
+    setStatus("Signed and submitted! Reference no. "+out.ref+". Preparing your PDF copy…","ok");
   }catch(err){
     setStatus("Could not submit ("+err.message+"). Please try again or contact an officer.","err");
-    $("submit").disabled=false;
+    $("submit").disabled=false; return;
+  }
+  // Step 2: make the signed PDF, download it, and send it to the org's Drive + email
+  try{
+    const pdf=await makePdf();
+    pdf.save(signedRef+".pdf");
+    const res2=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"pdf",ref:signedRef,email:v.email,pdf:pdf.output("datauristring")})});
+    const o2=await res2.json();
+    if(!o2.ok) throw new Error(o2.error||"Unknown error");
+    setStatus("Done! Reference no. "+signedRef+". Your signed PDF copy was downloaded"+(o2.emailed?" and emailed to "+v.email:"")+".","ok");
+  }catch(err){
+    setStatus("Your MOA was submitted (Ref. "+signedRef+"), but the PDF copy failed ("+err.message+"). Use Print / Save as PDF to keep a copy.","err");
   }
 };
+
+// ----- signed PDF copy (letterhead on every page, page numbers at the bottom) -----
+let signedRef="";
+async function makePdf(){
+  await document.fonts.ready;
+  const sx=window.scrollX, sy=window.scrollY; window.scrollTo(0,0);
+  const cap={scale:2,backgroundColor:"#ffffff",windowWidth:1000,scrollX:0,scrollY:0,useCORS:true};
+  // letterhead copy without the page's negative margins, so nothing gets cropped
+  const lh=document.querySelector(".lh").cloneNode(true);
+  lh.style.cssText="margin:0;width:760px;background:#fff";
+  const lhCanvas=await html2pdf().set({html2canvas:cap}).from(lh).toCanvas().get("canvas");
+  document.body.classList.add("pdfmode");
+  try{
+    const W=8.5, H=11, side=0.9;
+    const lhW=W-1.0, lhH=lhW*lhCanvas.height/lhCanvas.width, top=0.3+lhH+0.2;
+    const worker=html2pdf().set({
+      margin:[top,side,0.75,side],
+      image:{type:"jpeg",quality:0.95},
+      html2canvas:{scale:2,backgroundColor:"#ffffff",useCORS:true},
+      jsPDF:{unit:"in",format:"letter",orientation:"portrait"},
+      pagebreak:{mode:["css","legacy"],avoid:["h4","li","p",".sig",".sigs",".noted"]}
+    }).from($("doc")).toPdf();
+    const pdf=await worker.get("pdf");
+    const lhImg=lhCanvas.toDataURL("image/jpeg",0.95), n=pdf.internal.getNumberOfPages();
+    for(let i=1;i<=n;i++){
+      pdf.setPage(i);
+      pdf.addImage(lhImg,"JPEG",0.5,0.3,lhW,lhH);
+      pdf.setFontSize(8); pdf.setTextColor(120);
+      pdf.text(signedRef+"   ·   Page "+i+" of "+n, W/2, H-0.4, {align:"center"});
+    }
+    pdf.setProperties({title:"Pylon Esports MOA "+signedRef});
+    return pdf;
+  } finally { document.body.classList.remove("pdfmode"); window.scrollTo(sx,sy); }
+}
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
