@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pylon MOA Signing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#e9eaee;--card:#fff;--ink:#1b1d24;--muted:#5d6272;--line:#d9dce4;--maroon:#a3151d;--red:#d0202a;--ok:#1d7a46;--err:#b42318}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Arimo,Arial,Helvetica,sans-serif}
+
+  /* top bar */
+  .bar{background:#14151a;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;justify-content:center}
+  .bar img{height:36px;width:36px;border-radius:6px}
+  .bar h1{margin:0;font-size:1.1rem;font-weight:700}
+  .bar p{margin:0;font-size:.85rem;opacity:.7}
+  main{max-width:880px;margin:0 auto;padding:20px 16px 40px}
+
+  /* steps */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
+  .card h2{font-size:1.05rem;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  .num{background:var(--red);color:#fff;border-radius:50%;width:26px;height:26px;display:inline-grid;place-items:center;font-size:.85rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .full{grid-column:1/-1}
+  label{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:4px}
+  input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus{outline:2px solid var(--red);border-color:transparent}
+
+  /* ===== the paper (matches the PDF) ===== */
+  .paper{background:#fff;width:100%;max-width:816px;margin:0 auto 20px;padding:28px 72px 64px;box-shadow:0 2px 14px rgba(0,0,0,.12);
+         font-family:Arimo,Arial,Helvetica,sans-serif;font-size:14.6px;line-height:1.5;color:#000}
+  .lh{display:grid;grid-template-columns:96px 1fr 96px;align-items:center;margin:0 -40px 22px}
+  .lh img{width:96px;height:96px;object-fit:contain}
+  .lh .pylon{width:88px;height:88px;justify-self:end}
+  .lh .txt{text-align:center;font-family:Merriweather,Georgia,serif;line-height:1.25}
+  .lh .u{color:var(--maroon);font-weight:700;font-size:20px}
+  .lh .a{font-weight:700;font-size:13.5px;color:#333}
+  .lh .s{font-size:13.5px;color:#333}
+  .title{font-family:"Times New Roman",Times,serif;font-weight:700;font-size:30px;text-align:center;margin:6px 0 26px;letter-spacing:.3px}
+  .paper p{margin:0 0 14px}
+  .paper .ind{text-indent:48px}
+  .paper .center{text-align:center;margin:-10px 0 0}
+  .paper h4{font-size:14.6px;font-weight:700;margin:26px 0 6px}
+  .paper ol{margin:0 0 6px;padding-left:48px}
+  .paper ol li{padding-left:6px;margin-bottom:2px}
+  .paper ul{list-style:circle;margin:2px 0;padding-left:30px}
+  .u-line{text-decoration:underline;text-underline-offset:2px}
+  .fill{text-decoration:underline;text-underline-offset:2px;background:#fff4c2;border-radius:2px}
+  .fill.empty{color:#9a9a9a;background:#f3f3f3}
+  .sigs{display:grid;grid-template-columns:1fr 1fr;gap:22px 40px;margin-top:34px}
+  .sig{position:relative;padding-top:40px;font-size:14.2px;line-height:1.45}
+  .sig img{position:absolute;left:-6px;bottom:38px;height:64px;max-width:240px;pointer-events:none}
+  .sig b{display:block}
+  .noted{margin-top:26px;font-weight:700}
+
+  /* signature step */
+  canvas{width:100%;height:190px;border:2px dashed #c4c7d1;border-radius:8px;background:#fff;touch-action:none;display:block}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  button{font:inherit;padding:10px 18px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  button.primary{background:var(--red);color:#fff;border-color:var(--red);font-weight:700}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .check{display:flex;gap:10px;align-items:flex-start;margin-top:16px}
+  .check input{width:auto;margin-top:5px}
+  .check label{font-weight:400;color:var(--ink);font-size:.93rem}
+  #status{font-weight:700}
+  #status.ok{color:var(--ok)} #status.err{color:var(--err)}
+
+  @media (max-width:760px){
+    .paper{padding:20px 18px 40px;font-size:14px}
+    .lh{grid-template-columns:56px 1fr 56px;margin:0 0 18px}
+    .lh img,.lh .pylon{width:56px;height:56px}
+    .lh .u{font-size:15px} .lh .a,.lh .s{font-size:11.5px}
+    .title{font-size:22px}
+    .paper ol{padding-left:24px} .paper .ind{text-indent:24px}
+  }
+  @media (max-width:560px){ .grid{grid-template-columns:1fr} .sigs{grid-template-columns:1fr} }
+
+  /* print = looks like the PDF, letterhead on every page */
+  @page{size:letter;margin:1.45in .9in .8in}
+  @media print{
+    body{background:#fff}
+    .bar,.card{display:none!important}
+    main{padding:0;max-width:none}
+    .paper{box-shadow:none;padding:0;max-width:none;font-size:11pt}
+    .lh{position:fixed;top:-1.3in;left:-.4in;right:-.4in;margin:0}
+    .fill{background:none}
+    .paper h4,.sig{break-inside:avoid}
+    .sigs{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <img src="pylon-logo.png" alt="">
+  <div><h1>Pylon Esports: Membership MOA</h1><p>Fill in your details, read the agreement, then sign.</p></div>
+</div>
+<main>
+
+<section class="card">
+  <h2><span class="num">1</span> Your details</h2>
+  <div class="grid">
+    <div class="full"><label for="name">Full name (First M.I. Last)</label><input id="name" placeholder="Juan L. Dela Cruz" autocomplete="name"></div>
+    <div><label for="studno">Student number</label><input id="studno" placeholder="2025-12345-MN-0"></div>
+    <div><label for="bday">Date of birth</label><input id="bday" type="date"></div>
+    <div><label for="college">College</label><input id="college" placeholder="College of Communication"></div>
+    <div><label for="program">Program</label><input id="program" placeholder="BA Broadcasting"></div>
+    <div class="full"><label for="address">Current address</label><input id="address" placeholder="House no., Street, Barangay, City, Region"></div>
+    <div class="full"><label for="email">Email</label><input id="email" type="email" placeholder="you@gmail.com" autocomplete="email"></div>
+  </div>
+</section>
+
+<article class="paper" id="doc">
+  <div class="lh">
+    <img src="pup-logo.png" alt="PUP seal">
+    <div class="txt">
+      <div class="u">Polytechnic University of the Philippines</div>
+      <div class="a">1016 Anonas, Sta. Mesa, Maynila, Kalakhang Maynila</div>
+      <div class="s">Pylon Esports 2026-2027</div>
+      <div class="s">Office of Executives</div>
+    </div>
+    <img class="pylon" src="pylon-logo.png" alt="Pylon Esports logo">
+  </div>
+
+  <div class="title">MEMORANDUM OF AGREEMENT</div>
+
+  <p>This Memorandum of Agreement is entered into this <span class="fill" data-f="date"></span> at the Polytechnic University of the Philippines, Sta. Mesa, Manila, by and between:</p>
+
+  <p><b>PYLON ESPORTS,</b> a non-sectarian, non-government student organization operating within the Polytechnic University of the Philippines, represented herein by its <b>Executive Board 2026-2027 Members</b>, hereinafter referred to as the <b>"Organization"</b>;</p>
+  <p class="center">—and—</p>
+  <p><b class="fill" data-f="nameUpper"></b>, born on <span class="fill" data-f="bday"></span> a bonafide student of the Polytechnic University of the Philippines within the <span class="fill" data-f="college"></span>, studying <span class="fill" data-f="program"></span>, currently residing at <span class="fill" data-f="address"></span>, hereinafter referred to as the <b>"Member".</b></p>
+
+  <h4 style="margin-top:34px">WITNESSETH:</h4>
+  <p class="ind"><b>WHEREAS</b>, Pylon Esports envisions creating a gaming community inside the Polytechnic University of the Philippines that promotes positivity and inclusivity for students who have a passion for gaming;</p>
+  <p class="ind"><b>WHEREAS</b>, Pylon Esports aims to be one of the most excellent Esports organizations managing different teams and expanding resources for the next generation of "Tanglaw ng Bayan" towards victory with valor;</p>
+  <p class="ind"><b>WHEREAS,</b> the Member wishes to join the Organization and agrees to be bound by its Constitution and By-Laws, rules, and regulations;</p>
+  <p><b>NOW, THEREFORE,</b> for and in consideration of the foregoing premises and the mutual covenants herein contained, the parties agree as follows:</p>
+
+  <h4>I. MEMBERSHIP CLASSIFICATION &amp; DUTIES</h4>
+  <ol>
+    <li>Classification: The Member is officially inducted into Pylon Esports under the classification of <b data-f="classif"></b></li>
+    <li>Financial Dues: The Member <b>acknowledges</b> that <b>Pylon Esports</b> d<b>oes not collect any kind of membership dues</b> for both semesters within the academic year.</li>
+    <li><b>Role Obligations:</b> The Member is explicitly obliged to faithfully execute all tasks, duties, and responsibilities associated with the specific staff, executive, or committee position they have joined. As stipulated in the Constitution and By-Laws, failure to perform assigned tasks, unsatisfactory performance, or lack of professionalism constitutes an infraction and may be grounds for disciplinary action.</li>
+  </ol>
+
+  <h4>II. ORGANIZATION'S COMMITMENTS AND RESPONSIBILITIES</h4>
+  <ol>
+    <li><b>Development &amp; Support:</b> In accordance with its principles, Pylon Esports commits to fostering a high-quality gaming environment and broadening opportunities for competitively inclined and intellectually qualified members through active help and support.</li>
+    <li><b>Dispute Resolution:</b> The Organization, primarily through the Operations department, is responsible for assisting members in resolving disputes amicably through mediation and maintaining their good standing.</li>
+    <li><b>Data Privacy &amp; Protection:</b> The Organization respects the Member's privacy. Member personal information will only be disclosed as required for management and operations, and any volunteered confidential or sensitive information will be strictly protected.</li>
+  </ol>
+
+  <h4>III. CONFIDENTIALITY AND NON-DISCLOSURE</h4>
+  <ol>
+    <li><b>Scope of Confidential Information:</b> In the course of membership, the Member may have access to non-public Confidential Information that is commercially valuable to the Organization. This includes documents, techniques, methods, practices, equipment, algorithms, models, software, sketches, plans, and marketing or financial information.</li>
+    <li><b>Obligations:</b> As consideration for continued membership, the Member agrees to the following:
+      <ul>
+        <li>Not to disclose Confidential Information via any unauthorized means to any third parties.</li>
+        <li>Not to discuss Confidential Information in any public places.</li>
+        <li>Not to remove hard copies of the Confidential Information from the physical premises of the Organization without authorization.</li>
+        <li>Not to use the Confidential Information for any purpose except those contemplated and authorized by the Organization.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4>IV. STANDARDS OF CONDUCT</h4>
+  <ol>
+    <li>General Guidelines: The <b>Member is expected to maintain professionalism</b>. The Organization <b>may discipline any member for actions deemed unacceptable</b>, whether conducting Organization business <b>on or off premises</b>.</li>
+    <li>Infractions: <b>Unacceptable conduct includes, but is not limited to</b>:
+      <ul>
+        <li>Unsatisfactory performance or lack of professionalism.</li>
+        <li>Abusing, threatening violence, or engaging in violence with another member or Organization staff.</li>
+        <li>Fraud, deceit, or stealing/unauthorized possession of property.</li>
+        <li>The use or possession of illegal drugs or weapons.</li>
+        <li>Excessive tardiness, failure to do assigned tasks, or breach of contract.</li>
+        <li>Misusing confidential Organization information.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4>V. ANTI-HARASSMENT AND DISCRIMINATION</h4>
+  <ol>
+    <li>Zero Tolerance: Pylon Esports is <b>committed to a safe, respectful, and lawful community</b>. The Organization <b>does not permit any instance of harassment or discriminatory conduct</b> by or towards anyone.</li>
+    <li>Protected Classes: <b>Harassment or unlawful discrimination against individuals</b> on the basis of <b>sex, race, color, religion, creed, national origin, sexual orientation, age, pregnancy, identity, ancestry, disability, marital status, or genetic information</b> is <b>strictly prohibited.</b></li>
+    <li>Disciplinary Consequence: Any member in violation of this policy will be subject to <b>immediate and severe disciplinary action, including termination.</b></li>
+  </ol>
+
+  <h4>VI. DISCIPLINARY ACTIONS &amp; IMPEACHMENT</h4>
+  <ol>
+    <li>Sanctions: The <b>Organization is liable for its members and has the authority to issue disciplinary actions as they see fit</b>. The magnitude of the disciplinary actions varies and may include a <b>written warning, oral warning, demotion, suspension, or dismissal.</b></li>
+    <li>Severe Violations: Disciplinary action <b>may be triggered</b> by <b>having a failure grade, committing heinous acts (e.g., stealing, sexual acts, murder), acts of violence, or pursuing any purpose contrary to ethical principles.</b></li>
+    <li>Due Process: <b>All members have the right to due process</b>. Serious misconduct may lead to an investigation and <b>subsequent impeachment upon a 2/3 vote by the Executive Committee.</b></li>
+  </ol>
+
+  <h4>VII. EFFECTIVITY</h4>
+  <p class="ind">This Agreement shall take <b>effect immediately upon signing</b> and shall remain in force <b>until the end of the next academic school year</b>, unless the Member graduates during the mid-year or the Agreement is earlier terminated in accordance with the Constitution and By-Laws.</p>
+
+  <p style="margin-top:20px">IN WITNESS WHEREOF, the parties have hereunto affixed their signatures on the date and place first above written.</p>
+
+  <div class="sigs" id="sigs"></div>
+  <div class="noted">NOTED BY:</div>
+  <div class="sigs" id="noted" style="margin-top:0"></div>
+</article>
+
+<section class="card">
+  <h2><span class="num">2</span> Sign here</h2>
+  <p style="margin-top:0;color:var(--muted)">Draw your signature with your mouse or finger. It appears on the agreement above.</p>
+  <canvas id="pad"></canvas>
+  <div class="row"><button type="button" id="clear">Clear signature</button></div>
+  <div class="check">
+    <input type="checkbox" id="agree">
+    <label for="agree">I have read and agree to this Memorandum of Agreement. I consent to Pylon Esports collecting and storing the information above for membership records, in line with the Data Privacy Act of 2012 (RA 10173).</label>
+  </div>
+  <div class="row">
+    <button type="button" class="primary" id="submit">Submit signed MOA</button>
+    <button type="button" id="print">Print / Save as PDF</button>
+    <span id="status" role="status"></span>
+  </div>
+</section>
+</main>
+
+<script>
+// ===== PASTE YOUR APPS SCRIPT WEB APP URL HERE (ends with /exec) =====
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvMc7mcHlCM_fjZzgUaNGepq0b1zjlv-xGUMEbM5wfPkgx_6zudmT3502fP5ax6wD9/exec";
+
+// ===== SIGNATORIES: edit names/titles here. Add  sig: "file.png"  to show a signature image. =====
+const SIGNATORIES = [
+  { name: "EXEQUIEL LEANDER SARMIENTO", title: "President", extra: "Pylon Esports" },
+  { name: "KRYLLE MARGARET CASTILLO", title: "Vice President for Operations" },
+  { name: "CARL JUSTIN TORRES", title: "Vice President for Multimedia" },
+  { name: "DHIL CARLSON TOLENTINO", title: "Acting Vice President for Esports" },
+  { name: "RIANNA YURAINE QUIOCHO", title: "Vice President for Marketing" },
+];
+const NOTED_BY = [
+  { name: "Kristine G. Guiriba", title: "Adviser | Sports Development Programs Office", extra: "Pylon Esports" },
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sigBlock = p => `<div class="sig">${p.sig ? `<img src="${esc(p.sig)}" alt="">` : ""}${esc(p.name)}<b>${esc(p.title)}</b>${p.extra ? esc(p.extra) : ""}</div>`;
+$("sigs").innerHTML =
+  `<div class="sig"><img id="sigPreview" alt="" hidden><span data-f="nameUpper"></span><b>Member Appointee</b><span data-f="studno"></span></div>` +
+  SIGNATORIES.map(sigBlock).join("");
+$("noted").innerHTML = NOTED_BY.map(sigBlock).join("");
+
+const fields = ["name","studno","bday","college","program","address","email"];
+const today = new Date();
+const mdy = d => String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0")+"/"+d.getFullYear();
+const dateStr = mdy(today);
+function fmtDate(v){ if(!v) return ""; const [y,m,d]=v.split("-"); return mdy(new Date(+y,m-1,+d)); }
+function values(){
+  const v={}; fields.forEach(f=>v[f]=$(f).value.trim());
+  v.classif="Member (Staff)";
+  v.nameUpper=v.name.toUpperCase(); v.bdayText=fmtDate(v.bday); v.date=dateStr; return v;
+}
+function render(){
+  const v=values();
+  const map={date:v.date,nameUpper:v.nameUpper,bday:v.bdayText,college:v.college.toUpperCase(),program:v.program,address:v.address,classif:v.classif,studno:v.studno};
+  document.querySelectorAll("[data-f]").forEach(el=>{
+    const val=map[el.dataset.f];
+    el.textContent = val || "________________";
+    el.classList.toggle("empty",!val);
+  });
+}
+fields.forEach(f=>{$(f).addEventListener("input",render); $(f).addEventListener("change",render);});
+render();
+
+// ----- signature pad -----
+const pad=$("pad"), ctx=pad.getContext("2d"); let drawing=false, hasInk=false, last=null;
+function sizePad(){
+  const r=pad.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  const old = hasInk ? pad.toDataURL() : null;
+  pad.width=r.width*dpr; pad.height=r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.lineWidth=2.4; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#1a2a7a";
+  if(old){const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,r.width,r.height); img.src=old;}
+}
+sizePad(); window.addEventListener("resize",sizePad);
+const pos=e=>{const r=pad.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top};};
+pad.addEventListener("pointerdown",e=>{drawing=true; last=pos(e); pad.setPointerCapture(e.pointerId);});
+pad.addEventListener("pointermove",e=>{ if(!drawing) return; const p=pos(e);
+  ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; hasInk=true; });
+["pointerup","pointercancel","pointerleave"].forEach(ev=>pad.addEventListener(ev,()=>{ if(drawing){drawing=false; showSig();} }));
+function showSig(){ if(!hasInk) return; $("sigPreview").src=pad.toDataURL("image/png"); $("sigPreview").hidden=false; }
+$("clear").onclick=()=>{ ctx.clearRect(0,0,pad.width,pad.height); hasInk=false; $("sigPreview").hidden=true; };
+
+$("print").onclick=()=>window.print();
+
+// ----- submit -----
+function setStatus(msg,cls){ const s=$("status"); s.textContent=msg; s.className=cls||""; }
+$("submit").onclick=async()=>{
+  const v=values();
+  const missing=fields.filter(f=>!v[f]);
+  if(missing.length){ setStatus("Please fill in all your details first.","err"); $(missing[0]).focus(); return; }
+  if(!hasInk){ setStatus("Please draw your signature.","err"); return; }
+  if(!$("agree").checked){ setStatus("Please tick the agreement box.","err"); return; }
+  if(SCRIPT_URL.startsWith("PASTE")){ setStatus("Setup not finished: the Apps Script URL is missing.","err"); return; }
+  $("submit").disabled=true; setStatus("Submitting…");
+  const payload={...v, signedAt:today.toISOString(), signature:pad.toDataURL("image/png"), userAgent:navigator.userAgent};
+  try{
+    // text/plain avoids the browser's CORS preflight, which Apps Script can't answer
+    const res=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+    const out=await res.json();
+    if(!out.ok) throw new Error(out.error||"Unknown error");
+    setStatus("Signed and submitted! Reference no. "+out.ref+". You can now print or save a copy.","ok");
+  }catch(err){
+    setStatus("Could not submit ("+err.message+"). Please try again or contact an officer.","err");
+    $("submit").disabled=false;
+  }
+};
+</script>
+</body>
+</html>
