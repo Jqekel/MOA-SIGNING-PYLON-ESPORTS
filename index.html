@@ -79,13 +79,32 @@
   @media (max-width:560px){ .grid{grid-template-columns:1fr} .sigs{grid-template-columns:1fr} }
 
   /* print = looks like the PDF, letterhead on every page */
-  @page{size:letter;margin:1.45in .9in .8in}
+  /* data privacy gate */
+  body.locked{overflow:hidden}
+  .gate{position:fixed;inset:0;z-index:50;background:rgba(10,11,15,.82);display:flex;align-items:center;justify-content:center;padding:16px}
+  .gate[hidden]{display:none}
+  .gbox{background:#fff;border-radius:14px;max-width:620px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:24px;border-top:6px solid var(--red)}
+  .glogos{display:flex;gap:10px;justify-content:center;margin-bottom:8px}
+  .glogos img{height:52px;width:52px;object-fit:contain}
+  .gbox h2{text-align:center;margin:0;font-family:Merriweather,Georgia,serif;color:var(--maroon);font-size:1.35rem}
+  .gsub{text-align:center;margin:2px 0 14px;color:var(--muted);font-size:.9rem}
+  .gtext{border:1px solid var(--line);border-radius:8px;padding:12px 14px;max-height:42vh;overflow:auto;font-size:.92rem;background:#fafafb}
+  .gtext p{margin:0 0 10px}
+  .gcheck{display:flex;gap:10px;align-items:flex-start;font-weight:400;color:var(--ink);font-size:.92rem;margin-top:14px}
+  .gcheck input{width:auto;margin-top:4px}
+  .gmsg{color:var(--err);font-weight:700;font-size:.9rem;margin:10px 0 0}
+
+  .ptable{width:100%;border-collapse:collapse}
+  .ptable td{padding:0;vertical-align:top}
+  @page{size:letter;margin:.3in .9in .8in}
   @media print{
     body{background:#fff}
-    .bar,.card{display:none!important}
+    .bar,.card,.gate{display:none!important}
     main{padding:0;max-width:none}
     .paper{box-shadow:none;padding:0;max-width:none;font-size:11pt}
-    .lh{position:fixed;top:-1.3in;left:-.4in;right:-.4in;margin:0}
+    .ptable thead{display:table-header-group}
+    .lh{margin:0 0 16px;grid-template-columns:78px 1fr 78px}
+    .lh img{width:78px;height:78px} .lh .pylon{width:72px;height:72px}
     .fill{background:none}
     .paper h4,.sig{break-inside:avoid}
     .sigs{break-inside:avoid}
@@ -93,6 +112,27 @@
 </style>
 </head>
 <body>
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="gbox">
+    <div class="glogos"><img src="pup-logo.png" alt=""><img src="pylon-logo.png" alt=""></div>
+    <h2 id="gateTitle">Data Privacy Notice</h2>
+    <p class="gsub">Republic Act No. 10173: Data Privacy Act of 2012</p>
+    <div class="gtext">
+      <p>Pylon Esports, an accredited student organization of the Polytechnic University of the Philippines, respects your right to privacy. Before you continue, please read how we handle your personal information.</p>
+      <p><b>What we collect:</b> your full name, student number, date of birth, college, program, address, email, and handwritten signature.</p>
+      <p><b>Why we collect it:</b> solely to process and keep a record of your Memorandum of Agreement and your membership in Pylon Esports for Academic Year 2026–2027.</p>
+      <p><b>How we keep it safe:</b> your information is stored in the organization's private Google account and can only be accessed by authorized officers of Pylon Esports and, when required, its adviser. It will not be sold or shared with third parties, except when required by the University or by law.</p>
+      <p><b>How long we keep it:</b> only for as long as your membership agreement is in effect and as required by the University's records policies, after which it will be securely deleted.</p>
+      <p><b>Your rights:</b> under RA 10173, you have the right to be informed, to access, to correct, to object, and to request the deletion of your personal data. For any concerns, email <b>esports.pylon.manila@gmail.com</b>.</p>
+    </div>
+    <label class="gcheck"><input type="checkbox" id="gateAgree"> I have read and understood this notice, and I freely give my consent to Pylon Esports to collect and process my personal information for the purposes stated above.</label>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" id="gateNo">I do not agree</button>
+      <button type="button" class="primary" id="gateYes" disabled>I agree, continue</button>
+    </div>
+    <p id="gateMsg" class="gmsg" hidden>You need to agree to the Data Privacy Notice to sign the MOA. If you have questions, please contact an officer.</p>
+  </div>
+</div>
 <div class="bar">
   <img src="pylon-logo.png" alt="">
   <div><h1>Pylon Esports: Membership MOA</h1><p>Fill in your details, read the agreement, then sign.</p></div>
@@ -113,6 +153,7 @@
 </section>
 
 <article class="paper" id="doc">
+<table class="ptable"><thead><tr><td>
   <div class="lh">
     <img src="pup-logo.png" alt="PUP seal">
     <div class="txt">
@@ -123,6 +164,7 @@
     </div>
     <img class="pylon" src="pylon-logo.png" alt="Pylon Esports logo">
   </div>
+</td></tr></thead><tbody><tr><td>
 
   <div class="title">MEMORANDUM OF AGREEMENT</div>
 
@@ -202,6 +244,7 @@
   <div class="sigs" id="sigs"></div>
   <div class="noted">NOTED BY:</div>
   <div class="sigs" id="noted" style="margin-top:0"></div>
+</td></tr></tbody></table>
 </article>
 
 <section class="card">
@@ -238,6 +281,19 @@ const NOTED_BY = [
 ];
 
 const $ = id => document.getElementById(id);
+
+// ----- Data Privacy gate (must agree before using the page) -----
+let privacyConsentAt = "";
+document.body.classList.add("locked");
+document.querySelector("main").inert = true; document.querySelector(".bar").inert = true;
+$("gateAgree").onchange = () => { $("gateYes").disabled = !$("gateAgree").checked; $("gateMsg").hidden = true; };
+$("gateNo").onclick = () => { $("gateMsg").hidden = false; };
+$("gateYes").onclick = () => {
+  privacyConsentAt = new Date().toISOString();
+  $("gate").hidden = true; document.body.classList.remove("locked");
+  document.querySelector("main").inert = false; document.querySelector(".bar").inert = false;
+  $("name").focus();
+};
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sigBlock = p => `<div class="sig">${p.sig ? `<img src="${esc(p.sig)}" alt="">` : ""}${esc(p.name)}<b>${esc(p.title)}</b>${p.extra ? esc(p.extra) : ""}</div>`;
 $("sigs").innerHTML =
@@ -297,7 +353,7 @@ $("submit").onclick=async()=>{
   if(!$("agree").checked){ setStatus("Please tick the agreement box.","err"); return; }
   if(SCRIPT_URL.startsWith("PASTE")){ setStatus("Setup not finished: the Apps Script URL is missing.","err"); return; }
   $("submit").disabled=true; setStatus("Submitting…");
-  const payload={...v, signedAt:today.toISOString(), signature:pad.toDataURL("image/png"), userAgent:navigator.userAgent};
+  const payload={...v, signedAt:today.toISOString(), privacyConsentAt, signature:pad.toDataURL("image/png"), userAgent:navigator.userAgent};
   try{
     // text/plain avoids the browser's CORS preflight, which Apps Script can't answer
     const res=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
