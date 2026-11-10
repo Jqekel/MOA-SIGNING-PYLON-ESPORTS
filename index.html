@@ -32,7 +32,7 @@
   /* ===== the paper (matches the PDF) ===== */
   .paper{background:#fff;width:100%;max-width:816px;margin:0 auto 20px;padding:28px 72px 64px;box-shadow:0 2px 14px rgba(0,0,0,.12);
          font-family:Arimo,Arial,Helvetica,sans-serif;font-size:14.6px;line-height:1.5;color:#000}
-  .lh{display:grid;grid-template-columns:96px 1fr 96px;align-items:center;margin:0 -40px 22px}
+  .lh{display:grid;grid-template-columns:96px 1fr 96px;align-items:center;margin:0 0 22px}
   .lh img{width:96px;height:96px;object-fit:contain}
   .lh .pylon{width:88px;height:88px;justify-self:end}
   .lh .txt{text-align:center;font-family:Merriweather,Georgia,serif;line-height:1.25}
@@ -384,7 +384,7 @@ $("submit").onclick=async()=>{
       body:JSON.stringify({action:"pdf",ref:signedRef,email:v.email,pdf:pdf.output("datauristring")})});
     const o2=await res2.json();
     if(!o2.ok) throw new Error(o2.error||"Unknown error");
-    setStatus("Done! Reference no. "+signedRef+". Your signed PDF copy was downloaded"+(o2.emailed?" and emailed to "+v.email:"")+".","ok");
+    setStatus("Done! Reference no. "+signedRef+". Your signed PDF copy was downloaded.","ok");
   }catch(err){
     setStatus("Your MOA was submitted (Ref. "+signedRef+"), but the PDF copy failed ("+err.message+"). Use Print / Save as PDF to keep a copy.","err");
   }
